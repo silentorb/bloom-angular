@@ -1,0 +1,12 @@
+{
+  "name": "bloom",
+  "version": "4.0.0",
+  "description": "Bloom\r Created by Christopher W. Johnson\r Copyright (c) 2012 Silent Orb",
+  "main": "Gruntfile.js",
+  "author": "Christopher W. Johnson <service@silentorb.com> (http://silentorb.com/)",
+  "license": "MIT",
+  "dependencies": {
+    "grunt": "^0.4.5",
+    "grunt-ts": "^3.0.0"
+  }
+}
