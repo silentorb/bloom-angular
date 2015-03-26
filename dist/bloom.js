@@ -26,29 +26,26 @@ var Bloom;
     }
     function bootrap_angular_app(flower, model, modules) {
         model = model || {};
-        flower = jQuery(flower);
+        var element = jQuery(flower);
         modules = modules || [];
-        modules.unshift(['$provide', function ($provide) {
-            $provide.value('$rootElement', flower);
-        }]);
         modules.unshift('ng');
         var injector = angular.injector(modules);
-        injector.invoke(['$rootScope', '$rootElement', '$compile', '$injector', function (scope, flower, compile, injector) {
-            scope.$apply(function () {
-                var new_scope;
-                if (typeof model == 'function') {
-                    new_scope = scope;
-                    model(scope, flower);
+        injector.invoke(['$rootScope', '$compile', '$injector', function (scope, compile, injector) {
+            if (typeof model == 'function') {
+                model(scope, element);
+            }
+            else {
+                for (var i in model) {
+                    scope[i] = model[i];
                 }
-                else {
-                    new_scope = angular.extend(scope.$new(), model);
-                }
-                flower.data('$injector', injector);
-                compile(flower)(new_scope);
-                new_scope.flower = flower;
-                if (typeof new_scope.initialize == 'function')
-                    new_scope.initialize();
+            }
+            scope.element = element;
+            element.children().each(function () {
+                compile(this)(scope);
             });
+            if (typeof scope.initialize == 'function')
+                scope.initialize();
+            scope.$digest();
         }]);
         return injector;
     }
@@ -57,7 +54,26 @@ var Bloom;
         proto.createdCallback = function () {
             var element_type = Bloom.elements[name];
             var template = document.importNode(element_type.template.content, true);
-            this.appendChild(template);
+            var content = template.querySelector('content');
+            if (content) {
+                var children = [], i;
+                for (i = this.children.length - 1; i >= 0; --i) {
+                    children.push(this.removeChild(this.children[i]));
+                }
+                this.appendChild(template);
+                var parent = content.parentNode;
+                for (i = 0; i < children.length; ++i) {
+                    parent.insertBefore(children[i], content);
+                }
+                parent.removeChild(content);
+            }
+            else {
+                if (this.childNodes.length > 0)
+                    this.insertBefore(template, this.firstChild);
+                else
+                    this.appendChild(template);
+            }
+            this.setAttribute('ng-non-bindable', '');
         };
         proto.attachedCallback = function () {
             bootrap_angular_app(this, model, modules);
@@ -65,9 +81,28 @@ var Bloom;
         document.registerElement(name, { prototype: proto });
     }
     Bloom.flower = flower;
+    function get_url_arguments(source) {
+        if (source === void 0) { source = undefined; }
+        var result = {}, text;
+        if (source !== undefined)
+            text = source;
+        else
+            text = window.location.search;
+        var items = text.slice(1).split(/[\&=]/);
+        if (items.length < 2)
+            return {};
+        for (var x = 0; x < items.length; x += 2) {
+            result[items[x]] = decodeURIComponent(items[x + 1].replace(/\+/g, ' '));
+        }
+        return result;
+    }
+    Bloom.get_url_arguments = get_url_arguments;
     var Event = (function () {
         function Event() {
             this.listeners = [];
+            this.one_time = [];
+            this.was_invoked = false;
+            this.last_args = null;
         }
         Event.prototype.add = function (listener, callback) {
             this.listeners.push({
@@ -75,12 +110,29 @@ var Bloom;
                 callback: callback
             });
         };
+        Event.prototype.once = function (listener, callback) {
+            if (this.was_invoked) {
+                callback.apply(listener, this.last_args);
+            }
+            else {
+                this.one_time.push({
+                    listener: listener,
+                    callback: callback
+                });
+            }
+        };
         Event.prototype.invoke = function () {
-            var args = Array.prototype.slice.call(arguments);
+            var args = this.last_args = Array.prototype.slice.call(arguments);
             for (var i = 0; i < this.listeners.length; ++i) {
                 var item = this.listeners[i];
                 item.callback.apply(item.listener, args);
             }
+            for (var i = 0; i < this.one_time.length; ++i) {
+                var item = this.one_time[i];
+                item.callback.apply(item.listener, args);
+            }
+            this.one_time = [];
+            this.was_invoked = true;
         };
         return Event;
     })();
