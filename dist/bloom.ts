@@ -41,6 +41,9 @@ module Bloom {
     var element = jQuery(flower)
 
     modules = modules || [];
+    modules.unshift(['$provide', function($provide) {
+      $provide.value('$rootElement', element);
+    }]);
     modules.unshift('ng');
 
     var injector = angular.injector(modules);
