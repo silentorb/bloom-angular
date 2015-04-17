@@ -2,6 +2,7 @@
 var Bloom;
 (function (Bloom) {
     Bloom.elements = {};
+    Bloom.global = {};
 
     function grow() {
         register_element();
@@ -46,6 +47,7 @@ var Bloom;
         injector.invoke([
             '$rootScope', '$compile', '$injector',
             function (scope, compile, injector) {
+                scope.global = Bloom.global;
                 if (typeof model == 'function') {
                     model(scope, element);
                 } else {

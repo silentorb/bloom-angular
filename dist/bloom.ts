@@ -1,12 +1,12 @@
 /*** Bloom 4 ***/
 
-
 module Bloom {
 	declare var angular
 	declare var jQuery
 	declare var document
 
 	export var elements = {}
+  export var global = {}
 
 	export function grow() {
 		register_element()
@@ -35,7 +35,6 @@ module Bloom {
 		document.registerElement('bloom-flower', {prototype: proto})
 	}
 
-
   function bootrap_angular_app(flower, model, modules) {
     model = model || {}
     var element = jQuery(flower)
@@ -49,6 +48,7 @@ module Bloom {
     var injector = angular.injector(modules);
     injector.invoke(['$rootScope', '$compile', '$injector',
         function (scope, compile, injector) {
+          scope.global = Bloom.global
           if (typeof model == 'function') {
             model(scope, element)
           }
