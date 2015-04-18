@@ -52,18 +52,28 @@ var Bloom;
                     model(scope, element);
                 } else {
                     for (var i in model) {
-                        scope[i] = model[i];
+                        flower[i] = model[i];
+                    }
+                    if (model.scope) {
+                        for (var i in model.scope) {
+                            var item = model.scope[i];
+                            scope[i] = typeof item != 'function' ? item : function () {
+                                item.apply(flower, arguments);
+                            };
+                        }
                     }
                 }
 
                 //console.log('Created', element[0].nodeName, model)
-                scope.element = element;
+                flower.element = scope.element = element;
                 element.children().each(function () {
                     compile(this)(scope);
                 });
 
-                if (typeof scope.initialize == 'function')
-                    scope.initialize();
+                flower.scope = scope;
+                if (typeof flower.initialize == 'function')
+                    flower.initialize();
+
                 scope.$digest();
             }]);
         return injector;
