@@ -45,6 +45,14 @@ module Bloom {
     }]);
     modules.unshift('ng');
 
+    function bind_to_scope(scope, i, item) {
+      scope[i] = typeof item != 'function'
+        ? item
+        : function () {
+        item.apply(flower, arguments)
+      }
+    }
+
     var injector = angular.injector(modules);
     injector.invoke(['$rootScope', '$compile', '$injector',
         function (scope, compile, injector) {
@@ -58,12 +66,7 @@ module Bloom {
             }
             if (model.scope) {
               for (var i in model.scope) {
-                var item = model.scope[i]
-                scope[i] = typeof item != 'function'
-                  ? item
-                  : function () {
-                  item.apply(flower, arguments)
-                }
+                bind_to_scope(scope, i, model.scope[i])
               }
             }
           }
