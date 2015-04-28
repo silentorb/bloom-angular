@@ -38,6 +38,9 @@ module Bloom {
   function bootrap_angular_app(flower, model, modules) {
     model = model || {}
     var element = jQuery(flower)
+    if (typeof model.preinitialize == 'function') {
+      model.preinitialize.call(model, flower)
+    }
 
     modules = modules || [];
     modules.unshift(['$provide', function ($provide) {
