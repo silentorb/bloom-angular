@@ -123,10 +123,35 @@ module Bloom {
     }
 
     proto.attachedCallback = function () {
-      bootrap_angular_app(this, model, modules)
+      bootrap_angular_app(this, Bloom.extend({}, model), modules)
+    }
+
+    if (typeof model.on_disconnect == 'function') {
+      proto.detachedCallback = function () {
+        this.on_disconnect()
+      }
     }
 
     document.registerElement(name, {prototype: proto})
+  }
+
+  export function extend(target, source, depth = 0) {
+    if (depth > 5)
+      throw new Error('Bloom.extend(): Cepth limit of 5 was exceeded.')
+
+    for (var i in source) {
+      if (typeof source[i] == 'object') {
+        var child = Array.isArray(source[i])
+          ? []
+          : {}
+        target[i] = Bloom.extend(child, source[i], depth + 1)
+      }
+      else {
+        target[i] = source[i]
+      }
+    }
+
+    return target
   }
 
   export function get_url_arguments(source = undefined) {

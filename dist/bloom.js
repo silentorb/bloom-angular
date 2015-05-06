@@ -3,15 +3,12 @@ var Bloom;
 (function (Bloom) {
     Bloom.elements = {};
     Bloom.global = {};
-
     function grow() {
         register_element();
     }
     Bloom.grow = grow;
-
     function register_element() {
         var proto = Object.create(HTMLElement.prototype);
-
         proto.createdCallback = function () {
             var name = this.attributes.name.value;
             var template = this.querySelector('template');
@@ -22,73 +19,60 @@ var Bloom;
                 if (node.nodeType == 8)
                     content.removeChild(node);
             }
-
             Bloom.elements[name] = {
                 name: name,
                 template: template
             };
         };
-
         document.registerElement('bloom-flower', { prototype: proto });
     }
-
     function bootrap_angular_app(flower, model, modules) {
         model = model || {};
         var element = jQuery(flower);
         if (typeof model.preinitialize == 'function') {
             model.preinitialize.call(model, flower);
         }
-
         modules = modules || [];
-        modules.unshift([
-            '$provide', function ($provide) {
-                $provide.value('$rootElement', element);
-            }]);
+        modules.unshift(['$provide', function ($provide) {
+            $provide.value('$rootElement', element);
+        }]);
         modules.unshift('ng');
-
         function bind_to_scope(scope, i, item) {
             scope[i] = typeof item != 'function' ? item : function () {
                 item.apply(flower, arguments);
             };
         }
-
         var injector = angular.injector(modules);
-        injector.invoke([
-            '$rootScope', '$compile', '$injector',
-            function (scope, compile, injector) {
-                scope.global = Bloom.global;
-                if (typeof model == 'function') {
-                    model(scope, element);
-                } else {
-                    for (var i in model) {
-                        flower[i] = model[i];
-                    }
-                    if (model.scope) {
-                        for (var i in model.scope) {
-                            bind_to_scope(scope, i, model.scope[i]);
-                        }
+        injector.invoke(['$rootScope', '$compile', '$injector', function (scope, compile, injector) {
+            scope.global = Bloom.global;
+            if (typeof model == 'function') {
+                model(scope, element);
+            }
+            else {
+                for (var i in model) {
+                    flower[i] = model[i];
+                }
+                if (model.scope) {
+                    for (var i in model.scope) {
+                        bind_to_scope(scope, i, model.scope[i]);
                     }
                 }
-
-                //console.log('Created', element[0].nodeName, model)
-                flower.element = scope.element = element;
-                element.children().each(function () {
-                    compile(this)(scope);
-                });
-
-                flower.scope = scope;
-                if (typeof flower.initialize == 'function')
-                    flower.initialize();
-
-                scope.$digest();
-            }]);
+            }
+            //console.log('Created', element[0].nodeName, model)
+            flower.element = scope.element = element;
+            element.children().each(function () {
+                compile(this)(scope);
+            });
+            flower.scope = scope;
+            if (typeof flower.initialize == 'function')
+                flower.initialize();
+            scope.$digest();
+        }]);
         return injector;
     }
-
     function flower(name, model, modules) {
         //console.log('Registering custom flower: ' + name)
         var proto = Object.create(HTMLElement.prototype);
-
         proto.createdCallback = function () {
             var element_type = Bloom.elements[name];
             var template = document.importNode(element_type.template.content, true);
@@ -98,51 +82,64 @@ var Bloom;
                 for (i = this.children.length - 1; i >= 0; --i) {
                     children.push(this.removeChild(this.children[i]));
                 }
-
                 this.appendChild(template);
                 var parent = content.parentNode;
                 for (i = 0; i < children.length; ++i) {
                     parent.insertBefore(children[i], content);
                 }
-
                 parent.removeChild(content);
-            } else {
+            }
+            else {
                 if (this.childNodes.length > 0)
                     this.insertBefore(template, this.firstChild);
                 else
                     this.appendChild(template);
             }
-
             this.setAttribute('ng-non-bindable', '');
         };
-
         proto.attachedCallback = function () {
-            bootrap_angular_app(this, model, modules);
+            bootrap_angular_app(this, Bloom.extend({}, model), modules);
         };
-
+        if (typeof model.on_disconnect == 'function') {
+            proto.detachedCallback = function () {
+                this.on_disconnect();
+            };
+        }
         document.registerElement(name, { prototype: proto });
     }
     Bloom.flower = flower;
-
+    function extend(target, source, depth) {
+        if (depth === void 0) { depth = 0; }
+        if (depth > 5)
+            throw new Error('Bloom.extend(): Cepth limit of 5 was exceeded.');
+        for (var i in source) {
+            if (typeof source[i] == 'object') {
+                var child = Array.isArray(source[i]) ? [] : {};
+                target[i] = Bloom.extend(child, source[i], depth + 1);
+            }
+            else {
+                target[i] = source[i];
+            }
+        }
+        return target;
+    }
+    Bloom.extend = extend;
     function get_url_arguments(source) {
-        if (typeof source === "undefined") { source = undefined; }
+        if (source === void 0) { source = undefined; }
         var result = {}, text;
         if (source !== undefined)
             text = source;
         else
             text = window.location.search;
-
         var items = text.slice(1).split(/[\&=]/);
         if (items.length < 2)
             return {};
-
         for (var x = 0; x < items.length; x += 2) {
             result[items[x]] = decodeURIComponent(items[x + 1].replace(/\+/g, ' '));
         }
         return result;
     }
     Bloom.get_url_arguments = get_url_arguments;
-
     var Event = (function () {
         function Event() {
             this.listeners = [];
@@ -156,31 +153,27 @@ var Bloom;
                 callback: callback
             });
         };
-
         Event.prototype.once = function (listener, callback) {
             if (this.was_invoked) {
                 callback.apply(listener, this.last_args);
-            } else {
+            }
+            else {
                 this.one_time.push({
                     listener: listener,
                     callback: callback
                 });
             }
         };
-
         Event.prototype.invoke = function () {
             var args = this.last_args = Array.prototype.slice.call(arguments);
-
             for (var i = 0; i < this.listeners.length; ++i) {
                 var item = this.listeners[i];
                 item.callback.apply(item.listener, args);
             }
-
             for (var i = 0; i < this.one_time.length; ++i) {
                 var item = this.one_time[i];
                 item.callback.apply(item.listener, args);
             }
-
             this.one_time = [];
             this.was_invoked = true;
         };
@@ -188,6 +181,5 @@ var Bloom;
     })();
     Bloom.Event = Event;
 })(Bloom || (Bloom = {}));
-
 Bloom.grow();
 //# sourceMappingURL=bloom.js.map
