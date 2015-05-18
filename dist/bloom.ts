@@ -52,7 +52,7 @@ module Bloom {
       scope[i] = typeof item != 'function'
         ? item
         : function () {
-        item.apply(flower, arguments)
+        return item.apply(flower, arguments)
       }
     }
 
@@ -97,6 +97,11 @@ module Bloom {
     proto.createdCallback = function () {
       var element_type = Bloom.elements[name]
       var template = document.importNode(element_type.template.content, true)
+      for (var j in element_type.template.attributes) {
+        var attr = element_type.template.attributes[j]
+        if (attr.value)
+          this.setAttribute(attr.name, attr.value)
+      }
       var content = template.querySelector('content')
       if (content) {
         var children = [], i
@@ -136,8 +141,9 @@ module Bloom {
   }
 
   export function extend(target, source, depth = 0) {
-    if (depth > 5)
-      throw new Error('Bloom.extend(): Cepth limit of 5 was exceeded.')
+    if (depth > 6)
+    if (depth > 6)
+      throw new Error('Bloom.extend(): Depth limit of 6 was exceeded.')
 
     for (var i in source) {
       if (typeof source[i] == 'object') {
