@@ -1,4 +1,4 @@
-/*** Bloom 4 ***/
+/*** Bloom Angular ***/
 var Bloom;
 (function (Bloom) {
     Bloom.elements = {};

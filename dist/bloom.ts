@@ -1,4 +1,4 @@
-/*** Bloom 4 ***/
+/*** Bloom Angular ***/
 
 module Bloom {
   declare var angular
