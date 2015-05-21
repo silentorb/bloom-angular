@@ -19,14 +19,13 @@ var Bloom;
                 if (node.nodeType == 8)
                     content.removeChild(node);
             }
-            Bloom.elements[name] = {
-                name: name,
-                template: template
-            };
+            var info = Bloom.elements[name] = Bloom.elements[name] || {};
+            info.name = name;
+            info.template = template;
         };
         document.registerElement('bloom-flower', { prototype: proto });
     }
-    function bootrap_angular_app(flower, model, modules) {
+    function angularize(flower, model, modules) {
         model = model || {};
         var element = jQuery(flower);
         if (typeof model.preinitialize == 'function') {
@@ -70,46 +69,56 @@ var Bloom;
         }]);
         return injector;
     }
+    function flowerize(node, name) {
+        var element_type = Bloom.elements[name];
+        var template = document.importNode(element_type.template.content, true);
+        for (var j in element_type.template.attributes) {
+            var attr = element_type.template.attributes[j];
+            if (attr.value)
+                node.setAttribute(attr.name, attr.value);
+        }
+        var content = template.querySelector('content');
+        if (content) {
+            var children = [], i;
+            for (i = node.children.length - 1; i >= 0; --i) {
+                children.push(node.removeChild(node.children[i]));
+            }
+            node.appendChild(template);
+            var parent = content.parentNode;
+            for (i = 0; i < children.length; ++i) {
+                parent.insertBefore(children[i], content);
+            }
+            parent.removeChild(content);
+        }
+        else {
+            if (node.childNodes.length > 0)
+                node.insertBefore(template, node.firstChild);
+            else
+                node.appendChild(template);
+        }
+        node.setAttribute('ng-non-bindable', '');
+    }
+    Bloom.flowerize = flowerize;
     function flower(name, model, modules) {
         //console.log('Registering custom flower: ' + name)
         var proto = Object.create(HTMLElement.prototype);
         proto.createdCallback = function () {
-            var element_type = Bloom.elements[name];
-            var template = document.importNode(element_type.template.content, true);
-            for (var j in element_type.template.attributes) {
-                var attr = element_type.template.attributes[j];
-                if (attr.value)
-                    this.setAttribute(attr.name, attr.value);
-            }
-            var content = template.querySelector('content');
-            if (content) {
-                var children = [], i;
-                for (i = this.children.length - 1; i >= 0; --i) {
-                    children.push(this.removeChild(this.children[i]));
-                }
-                this.appendChild(template);
-                var parent = content.parentNode;
-                for (i = 0; i < children.length; ++i) {
-                    parent.insertBefore(children[i], content);
-                }
-                parent.removeChild(content);
-            }
-            else {
-                if (this.childNodes.length > 0)
-                    this.insertBefore(template, this.firstChild);
-                else
-                    this.appendChild(template);
-            }
-            this.setAttribute('ng-non-bindable', '');
+            flowerize(this, name);
         };
         proto.attachedCallback = function () {
-            bootrap_angular_app(this, Bloom.extend({}, model), modules);
+            angularize(this, Bloom.extend({}, model), modules);
         };
-        if (typeof model.on_disconnect == 'function') {
+        if (typeof model.on_prune == 'function') {
+            proto.detachedCallback = function () {
+                this.on_prune();
+            };
+        }
+        else if (typeof model.on_disconnect == 'function') {
             proto.detachedCallback = function () {
                 this.on_disconnect();
             };
         }
+        console.log('registering custom element:', name);
         document.registerElement(name, { prototype: proto });
     }
     Bloom.flower = flower;
@@ -120,8 +129,13 @@ var Bloom;
                 throw new Error('Bloom.extend(): Depth limit of 6 was exceeded.');
         for (var i in source) {
             if (typeof source[i] == 'object') {
-                var child = Array.isArray(source[i]) ? [] : {};
-                target[i] = Bloom.extend(child, source[i], depth + 1);
+                if (!source[i]) {
+                    target[i] = null;
+                }
+                else {
+                    var child = Array.isArray(source[i]) ? [] : {};
+                    target[i] = Bloom.extend(child, source[i], depth + 1);
+                }
             }
             else {
                 target[i] = source[i];
@@ -130,6 +144,30 @@ var Bloom;
         return target;
     }
     Bloom.extend = extend;
+    function bud(name, model, modules) {
+        var info = Bloom.elements[name] = Bloom.elements[name] || {};
+        info.model = model;
+        info.modules = modules;
+    }
+    Bloom.bud = bud;
+    function blossom(parent, name) {
+        var info = Bloom.elements[name];
+        var flower = document.createElement(name);
+        parent.appendChild(flower);
+        flowerize(flower, name);
+        angularize(flower, Bloom.extend({}, info.model), info.modules);
+        return flower;
+    }
+    Bloom.blossom = blossom;
+    function prune(flower) {
+        if (typeof flower.on_disconnect == 'function')
+            flower.on_disconnect();
+        if (typeof flower.on_prune == 'function')
+            flower.on_prune();
+        if (flower.parentNode)
+            flower.parentNode.removeChild(flower);
+    }
+    Bloom.prune = prune;
     function get_url_arguments(source) {
         if (source === void 0) { source = undefined; }
         var result = {}, text;
