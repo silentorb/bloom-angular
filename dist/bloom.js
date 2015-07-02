@@ -32,6 +32,8 @@ var Bloom;
             model.preinitialize.call(model, flower);
         }
         modules = modules || [];
+        if (typeof modules == 'string')
+            modules = [modules];
         modules.unshift(['$provide', function ($provide) {
             $provide.value('$rootElement', element);
         }]);
