@@ -44,7 +44,7 @@ module Bloom {
     modules = modules || []
     if (typeof modules == 'string')
       modules = [ modules ]
-    
+
     modules.unshift(['$provide', function ($provide) {
       $provide.value('$rootElement', element);
     }]);
@@ -83,6 +83,9 @@ module Bloom {
           })
 
           flower.scope = scope
+          flower.get_component = function(name) {
+            return injector.get(name)
+          }
           if (typeof flower.initialize == 'function')
             flower.initialize()
 

@@ -65,6 +65,9 @@ var Bloom;
                 compile(this)(scope);
             });
             flower.scope = scope;
+            flower.get_component = function (name) {
+                return injector.get(name);
+            };
             if (typeof flower.initialize == 'function')
                 flower.initialize();
             scope.$digest();
