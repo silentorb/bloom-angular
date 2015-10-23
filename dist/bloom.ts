@@ -150,7 +150,7 @@ module Bloom {
         this.on_disconnect()
       }
     }
-    console.log('registering custom element:', name)
+    //console.log('registering custom element:', name)
     document.registerElement(name, {prototype: proto})
   }
 
@@ -218,6 +218,9 @@ module Bloom {
       return {};
 
     for (var x = 0; x < items.length; x += 2) {
+      if (!items[x + 1])
+        continue
+
       result[items[x]] = decodeURIComponent(items[x + 1].replace(/\+/g, ' '));
     }
     return result;
